@@ -13,6 +13,7 @@ learning and experimentation purposes.
     * [x] Bitmap font ([`cozette`](https://github.com/slavfox/Cozette))
           with a from-scratch rendering implementation.
 - [ ] Unit and Integration tests
+- [ ] Booting with UEFI
 - [x] Interrupts
   - [x] CPU Exceptions (Page Fault, Double Fault, etc)
   - [x] APIC Hardware Interrupts
@@ -20,6 +21,7 @@ learning and experimentation purposes.
   - [x] Access to physical memory at virtual location
   - [x] Access to paging and page allocation
   - [ ] Heap allocation
+- [ ] Concurrency with Rust `async` and `await`
 - [ ] Filesystem Drivers
   - [ ] *TODO:* What does this need?
 - [ ] Abstract into dynamically loaded modules

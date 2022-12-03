@@ -12,15 +12,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
 
     // Create UEFI disk image
-    // let uefi_path = out_dir.join("uefi.img");
-    // bootloader::UefiBoot::new(&kernel).create_disk_image(&uefi_path)?;
+    let uefi_path = out_dir.join("uefi.img");
+    bootloader::UefiBoot::new(&kernel).create_disk_image(&uefi_path)?;
 
     // Create BIOS disk image
     let bios_path = out_dir.join("bios.img");
     bootloader::BiosBoot::new(&kernel).create_disk_image(&bios_path)?;
 
     // Pass disk image path as env variables to the `main.rs`
-    // println!("cargo:rustc-env=UEFI_PATH={}", uefi_path.display());
+    println!("cargo:rustc-env=UEFI_PATH={}", uefi_path.display());
     println!("cargo:rustc-env=BIOS_PATH={}", bios_path.display());
 
     Ok(())

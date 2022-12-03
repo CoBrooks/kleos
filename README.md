@@ -14,6 +14,10 @@ learning and experimentation purposes.
           with a from-scratch rendering implementation.
 - [ ] Unit and Integration tests
 - [ ] Booting with UEFI
+  + Notes: 
+    * UEFI uses 4 bytes per pixel, which throws off the current fb rendering implementation.
+    * Display is also 1280x800 instead of the BIOS' 1280x720...
+    * Otherwise, everything works as normal.
 - [x] Interrupts
   - [x] CPU Exceptions (Page Fault, Double Fault, etc)
   - [x] APIC Hardware Interrupts

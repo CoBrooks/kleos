@@ -7,7 +7,7 @@ enum BootType {
 const BOOT_TYPE: BootType = BootType::BIOS;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // let uefi_path = env!("UEFI_PATH");
+    let uefi_path = env!("UEFI_PATH");
     let bios_path = env!("BIOS_PATH");
 
     let headless = std::env::var("NO_DISPLAY").unwrap_or("false".to_string());
@@ -29,11 +29,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match BOOT_TYPE {
         BootType::UEFI => {
-            unimplemented!()
-            // cmd.arg("-bios")
-            //     .arg(ovmf_prebuilt::ovmf_pure_efi());
-            // cmd.arg("-drive")
-            //     .arg(format!("format=raw,file={uefi_path}"));
+            cmd.arg("-bios")
+                .arg(ovmf_prebuilt::ovmf_pure_efi());
+            cmd.arg("-drive")
+                .arg(format!("format=raw,file={uefi_path}"));
         },
         BootType::BIOS => {
             cmd.arg("-drive")

@@ -1,11 +1,12 @@
 use pic8259::ChainedPics;
+use spin::{Lazy, Mutex};
 use x2apic::{lapic::{LocalApicBuilder, LocalApic}, ioapic::{IoApic, IrqMode, IrqFlags}};
 
-use crate::{Lazy, PHYSICAL_MEM_OFFSET};
+use crate::PHYSICAL_MEM_OFFSET;
 
-pub static mut LAPIC: Lazy<LocalApic> = Lazy::new(|| {
+pub static LAPIC: Lazy<Mutex<LocalApic>> = Lazy::new(|| {
     let phys_addr = unsafe { x2apic::lapic::xapic_base() };
-    let virt_addr = unsafe { phys_addr + *PHYSICAL_MEM_OFFSET.unwrap() };
+    let virt_addr = phys_addr + *PHYSICAL_MEM_OFFSET.get().unwrap();
 
     let lapic = LocalApicBuilder::new()
         .timer_vector(ApicInterruptIndex::Timer as usize)
@@ -15,19 +16,19 @@ pub static mut LAPIC: Lazy<LocalApic> = Lazy::new(|| {
         .build()
         .expect("Failed to build LocalApic");
 
-    lapic
+    lapic.into()
 });
 
 const IOAPIC_IRQ_OFFSET: u8 = 0x20;
 
-pub static mut IOAPIC: Lazy<IoApic> = Lazy::new(|| unsafe {
+pub static mut IOAPIC: Lazy<Mutex<IoApic>> = Lazy::new(|| unsafe {
     let phys_addr = 0xFEC0_0000;
-    let virt_addr = phys_addr + *PHYSICAL_MEM_OFFSET.unwrap();
+    let virt_addr = phys_addr + *PHYSICAL_MEM_OFFSET.get().unwrap();
 
     let mut ioapic = IoApic::new(virt_addr);
     ioapic.init(IOAPIC_IRQ_OFFSET);
 
-    let apic_id = LAPIC.unwrap().id();
+    let apic_id = LAPIC.lock().id();
 
     let mut keyboard_entry = ioapic.table_entry(IrqVector::Keyboard as u8);
     keyboard_entry.set_mode(IrqMode::Fixed);
@@ -37,14 +38,14 @@ pub static mut IOAPIC: Lazy<IoApic> = Lazy::new(|| unsafe {
 
     ioapic.enable_irq(IrqVector::Keyboard as u8);
 
-    ioapic
+    ioapic.into()
 });
 
 pub fn init() {
     unsafe {
         disable_pic();
-        LAPIC.unwrap().enable();
-        IOAPIC.init();
+        LAPIC.lock().enable();
+        // TODO: remove IOAPIC.init();
         x86_64::instructions::interrupts::enable();
     }
 }

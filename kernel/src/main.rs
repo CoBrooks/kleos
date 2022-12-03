@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
+
 use core::panic::PanicInfo;
 
 use bootloader_api::{entry_point, config::Mapping, BootloaderConfig, BootInfo};

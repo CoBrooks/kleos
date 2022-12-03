@@ -1,8 +1,9 @@
+use spin::Lazy;
 use x86_64::structures::idt::InterruptDescriptorTable;
 
-use crate::{Lazy, gdt, apic::ApicInterruptIndex};
+use crate::{gdt, apic::ApicInterruptIndex};
 
-static mut IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
     let mut idt = InterruptDescriptorTable::new();
 
     idt.breakpoint.set_handler_fn(handlers::breakpoint);
@@ -25,12 +26,13 @@ static mut IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
 pub fn init() {
     unsafe {
         crate::gdt::init();
-        IDT.unwrap().load();
     }
+
+    IDT.load();
 }
 
 mod handlers {
-    use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
+    use x86_64::{structures::idt::{InterruptStackFrame, PageFaultErrorCode}, instructions::port::Port};
 
     use crate::{println, apic::LAPIC, hlt_loop, print};
 
@@ -42,22 +44,26 @@ mod handlers {
     pub extern "x86-interrupt" fn timer(_: InterruptStackFrame) {
         // println!("RECEIVED TIMER INTERRUPT: {stack_frame:#?}");
         print!(".");
-        unsafe { LAPIC.unwrap().end_of_interrupt() }
+        unsafe { LAPIC.lock().end_of_interrupt() }
     }
     
     pub extern "x86-interrupt" fn keyboard(_: InterruptStackFrame) {
-        println!("KEY PRESSED");
-        unsafe { LAPIC.unwrap().end_of_interrupt() }
+        let mut port = Port::new(0x60);
+        let scancode: u8 = unsafe { port.read() };
+        print!("{scancode}");
+
+        println!("");
+        unsafe { LAPIC.lock().end_of_interrupt() }
     }
     
     pub extern "x86-interrupt" fn error(stack_frame: InterruptStackFrame) {
         println!("RECEIVED ERROR INTERRUPT: {stack_frame:#?}");
-        unsafe { LAPIC.unwrap().end_of_interrupt() }
+        unsafe { LAPIC.lock().end_of_interrupt() }
     }
     
     pub extern "x86-interrupt" fn spurious(stack_frame: InterruptStackFrame) {
         println!("RECEIVED SPURIOUS INTERRUPT: {stack_frame:#?}");
-        unsafe { LAPIC.unwrap().end_of_interrupt() }
+        unsafe { LAPIC.lock().end_of_interrupt() }
     }
 
     pub extern "x86-interrupt" fn page_fault(stack_frame: InterruptStackFrame, error_code: PageFaultErrorCode) {

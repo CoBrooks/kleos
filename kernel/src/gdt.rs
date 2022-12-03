@@ -1,20 +1,19 @@
+use spin::Lazy;
 use x86_64::instructions::tables::load_tss;
 use x86_64::registers::segmentation::{CS, Segment, DS, ES, SS};
 use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor, SegmentSelector}; 
 use x86_64::{structures::tss::TaskStateSegment, VirtAddr};
 
-use crate::Lazy;
-
-pub static mut GDT: Lazy<(GlobalDescriptorTable, Selectors)> = Lazy::new(|| unsafe {
+pub static GDT: Lazy<(GlobalDescriptorTable, Selectors)> = Lazy::new(|| {
     let mut gdt = GlobalDescriptorTable::new();
     let kernel_cs = gdt.add_entry(Descriptor::kernel_code_segment());
     let kernel_ds = gdt.add_entry(Descriptor::kernel_data_segment());
-    let tss = gdt.add_entry(Descriptor::tss_segment(TSS.unwrap()));
+    let tss = gdt.add_entry(Descriptor::tss_segment(&TSS));
 
     (gdt, Selectors { kernel_cs, kernel_ds, tss })
 });
 
-pub(crate) static mut TSS: Lazy<TaskStateSegment> = Lazy::new(|| {
+pub(crate) static TSS: Lazy<TaskStateSegment> = Lazy::new(|| {
     let mut tss = TaskStateSegment::new();
 
     tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
@@ -35,9 +34,7 @@ pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 ///
 /// This function may only be called once.
 pub unsafe fn init() {
-    GDT.init();
-
-    let (gdt, selectors) = GDT.unwrap();
+    let (gdt, selectors) = &*GDT;
     gdt.load();
     
     CS::set_reg(selectors.kernel_cs);

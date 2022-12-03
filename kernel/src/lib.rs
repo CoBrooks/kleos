@@ -1,8 +1,17 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
+#![feature(alloc_error_handler)]
+#![feature(const_mut_refs)]
+
+extern crate alloc;
 
 use bootloader_api::BootInfo;
+use spin::{Once, Mutex, MutexGuard};
+use x86_64::VirtAddr;
 
+use crate::memory::BootInfoFrameAllocator;
+
+pub mod allocator;
 pub mod apic;
 pub mod font;
 pub mod framebuffer;
@@ -11,49 +20,24 @@ pub mod interrupts;
 pub mod memory;
 pub mod serial;
 
-pub enum Lazy<T: 'static> {
-    Initialized(T),
-    Uninitialized(fn() -> T),
-    Empty
+pub struct Locked<T> {
+    inner: Mutex<T>
 }
 
-impl<T> Lazy<T> {
-    pub const fn new(init: fn() -> T) -> Self {
-        Lazy::Uninitialized(init)
+impl<T> Locked<T> {
+    const fn new(inner: T) -> Self {
+        Locked { inner: Mutex::new(inner) }
     }
 
-    /// # Safety
-    ///
-    /// Caller must only call this once, or else risk 
-    /// swapping the value in place.
-    pub unsafe fn unsafe_init(&mut self, t: T) {
-        *self = Lazy::Initialized(t);
-    }
-
-    pub fn init(&mut self) {
-        if let Lazy::Uninitialized(initfn) = self {
-            *self = Lazy::Initialized(initfn());
-        } else {
-            panic!("Lazy has already been initialized")
-        }
-    }
-
-    pub fn unwrap(&mut self) -> &mut T {
-        match self {
-            Lazy::Initialized(t) => t,
-            Lazy::Uninitialized(_) => {
-                self.init();
-                self.unwrap()
-            }
-            Lazy::Empty => panic!("Cannot unwrap Lazy::Empty. Lazy must be initialized or contain an initializer.")
-        }
+    fn lock(&self) -> MutexGuard<T> {
+        self.inner.lock()
     }
 }
 
-pub static mut PHYSICAL_MEM_OFFSET: Lazy<u64> = Lazy::Empty;
+pub static PHYSICAL_MEM_OFFSET: Once<u64> = Once::new();
 
 pub fn init(boot_info: &'static mut BootInfo) {
-    unsafe { PHYSICAL_MEM_OFFSET.unsafe_init(*boot_info.physical_memory_offset.as_ref().unwrap()); }
+    PHYSICAL_MEM_OFFSET.call_once(|| *boot_info.physical_memory_offset.as_ref().unwrap());
 
     // Framebuffer Output
     let fb = boot_info.framebuffer.as_mut().unwrap();
@@ -69,6 +53,17 @@ pub fn init(boot_info: &'static mut BootInfo) {
     // APIC
     print!("INIT: APIC... ");
     apic::init();
+    println!("[OK]");
+
+    // Heap
+    print!("INIT: Heap... ");
+    let physical_mem_offset = VirtAddr::new(*PHYSICAL_MEM_OFFSET.get().unwrap());
+    let mut mapper = unsafe { memory::init(physical_mem_offset) };
+    let mut frame_allocator = unsafe {
+        BootInfoFrameAllocator::init(&boot_info.memory_regions)
+    };
+    allocator::init_heap(&mut mapper, &mut frame_allocator)
+        .expect("Heap initialization failed");
     println!("[OK]");
 
     println!("Finished Initialization!");

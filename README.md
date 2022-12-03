@@ -17,10 +17,12 @@ learning and experimentation purposes.
 - [x] Interrupts
   - [x] CPU Exceptions (Page Fault, Double Fault, etc)
   - [x] APIC Hardware Interrupts
-- [ ] Memory management
+- [x] Memory management
   - [x] Access to physical memory at virtual location
   - [x] Access to paging and page allocation
-  - [ ] Heap allocation
+  - [x] Heap allocation
+    + using Fixed Size Block + Linked List Allocators
+    + See [here](https://os.phil-opp.com/allocator-designs/#fixed-size-block-allocator).
 - [ ] Concurrency with Rust `async` and `await`
 - [ ] Filesystem Drivers
   - [ ] *TODO:* What does this need?

@@ -1,15 +1,14 @@
 use core::fmt::Write;
 
 use bootloader_api::info::FrameBufferInfo;
+use spin::{Mutex, Once};
 
-use crate::{font, Lazy};
+use crate::font;
 
-pub static mut FB_WRITER: Lazy<FrameBufferWriter> = Lazy::Empty;
+pub static FB_WRITER: Once<Mutex<FrameBufferWriter>> = Once::new();
 
 pub(super) fn init(buffer: &'static mut [u8], info: FrameBufferInfo) {
-    unsafe {
-        FB_WRITER.unsafe_init(FrameBufferWriter::new(buffer, info));
-    }
+    FB_WRITER.call_once(|| FrameBufferWriter::new(buffer, info).into());
 }
 
 pub struct FrameBufferWriter {
@@ -119,14 +118,17 @@ impl Write for FrameBufferWriter {
 
 #[doc(hidden)]
 pub fn _print(args: ::core::fmt::Arguments) {
-    unsafe {
+    use ::x86_64::instructions::interrupts;
+
+    interrupts::without_interrupts(|| {
         crate::serial::_print(args);
 
-        if let Lazy::Initialized(ref mut framebuffer) = FB_WRITER {
-            framebuffer.write_fmt(args)
-                .expect("Failed to write to framebuffer");
-        }
-    }
+        FB_WRITER.get()
+            .expect("Framebuffer has not been initialized")
+            .lock()
+            .write_fmt(args)
+            .expect("Failed to write to framebuffer");
+    })
 }
 
 #[macro_export]

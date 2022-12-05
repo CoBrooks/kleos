@@ -16,6 +16,11 @@ target = "x86_64-unknown-none"
 [dependencies]
 ovmf-prebuilt = "0.1.0-alpha.1"
 
+[dependencies.time]
+version = "0.3.17"
+default-features = false
+features = ["alloc", "formatting", "local-offset"]
+
 [workspace]
 members = ["kernel"]
 

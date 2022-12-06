@@ -20,8 +20,7 @@ impl Debugger {
     }
 
     fn run(&mut self) -> Output {
-        let child = self.cmd.spawn().unwrap();
-        child.wait_with_output().unwrap()
+        self.cmd.output().unwrap()
     }
 }
 
@@ -42,7 +41,11 @@ impl Drop for Debugger {
         let format = time::format_description::parse("[month]/[day]/[year] [hour]:[minute]").unwrap();
 
         writeln!(file, "{:-^48}", format!(" {} ", now.format(&format).unwrap())).unwrap();
-        writeln!(file, "{}\n", String::from_utf8(output.stdout).unwrap()).unwrap();
+
+        let out = String::from_utf8(output.stdout).unwrap();
+        writeln!(file, "{}\n", &out).unwrap();
+
+        println!("{out}");
     }
 }
 

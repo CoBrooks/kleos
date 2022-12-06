@@ -34,7 +34,7 @@ pub fn init() {
 mod handlers {
     use x86_64::{structures::idt::{InterruptStackFrame, PageFaultErrorCode}, instructions::port::Port};
 
-    use crate::{println, apic::LAPIC, hlt_loop, print};
+    use crate::{println, apic::LAPIC, hlt_loop};
 
     pub extern "x86-interrupt" fn breakpoint(stack_frame: InterruptStackFrame) {
         println!("EXCEPTION: BREAKPOINT");
@@ -42,17 +42,15 @@ mod handlers {
     }
 
     pub extern "x86-interrupt" fn timer(_: InterruptStackFrame) {
-        // println!("RECEIVED TIMER INTERRUPT: {stack_frame:#?}");
-        print!(".");
+        // print!(".");
         unsafe { LAPIC.lock().end_of_interrupt() }
     }
     
     pub extern "x86-interrupt" fn keyboard(_: InterruptStackFrame) {
         let mut port = Port::new(0x60);
         let scancode: u8 = unsafe { port.read() };
-        print!("{scancode}");
+        println!("{scancode}");
 
-        println!("");
         unsafe { LAPIC.lock().end_of_interrupt() }
     }
     

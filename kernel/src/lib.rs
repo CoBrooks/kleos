@@ -1,7 +1,11 @@
 #![no_std]
-#![feature(abi_x86_interrupt)]
-#![feature(alloc_error_handler)]
-#![feature(const_mut_refs)]
+#![feature(
+    abi_x86_interrupt,
+    alloc_error_handler,
+    const_mut_refs,
+    let_chains,
+    slice_as_chunks
+)]
 
 extern crate alloc;
 
@@ -13,12 +17,14 @@ use crate::memory::BootInfoFrameAllocator;
 
 pub mod allocator;
 pub mod apic;
+pub mod color;
 pub mod font;
 pub mod framebuffer;
 pub mod gdt;
 pub mod interrupts;
 pub mod memory;
 pub mod serial;
+pub mod tracing;
 
 pub struct Locked<T> {
     inner: Mutex<T>
@@ -46,17 +52,17 @@ pub fn init(boot_info: &'static mut BootInfo) {
     println!("INIT: Framebuffer... [OK]");
 
     // Interrupts
-    print!("INIT: Interrupts... ");
+    print!("INIT: Interrupts.... ");
     interrupts::init();
     println!("[OK]");
 
     // APIC
-    print!("INIT: APIC... ");
+    print!("INIT: APIC.......... ");
     apic::init();
     println!("[OK]");
 
     // Heap
-    print!("INIT: Heap... ");
+    print!("INIT: Heap.......... ");
     let physical_mem_offset = VirtAddr::new(*PHYSICAL_MEM_OFFSET.get().unwrap());
     let mut mapper = unsafe { memory::init(physical_mem_offset) };
     let mut frame_allocator = unsafe {
@@ -66,7 +72,12 @@ pub fn init(boot_info: &'static mut BootInfo) {
         .expect("Heap initialization failed");
     println!("[OK]");
 
-    println!("Finished Initialization!");
+    // Tracing
+    print!("INIT: Tracing....... ");
+    tracing::init_tracing();
+    println!("[OK]");
+
+    println!("Finished Initialization!\n");
 }
 
 pub fn hlt_loop() -> ! {

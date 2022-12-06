@@ -3,6 +3,9 @@
 
 extern crate alloc;
 
+#[macro_use]
+extern crate tracing;
+
 use core::panic::PanicInfo;
 
 use bootloader_api::{entry_point, config::Mapping, BootloaderConfig, BootInfo};
@@ -23,12 +26,22 @@ pub static BOOTLOADER_CONFIG: BootloaderConfig = {
 };
 entry_point!(kernel_main, config = &BOOTLOADER_CONFIG);
 
+#[instrument]
+fn test_tracing(a: u64, b: bool) {
+    info!("Testing tracing!");
+}
+
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     kernel::init(boot_info);
 
-    println!("Hello, World!");
-    println!("Hello, Again!");
+    debug!("Hello, World!");
+    info!("Hello, Again!");
+    warn!("Hello, Again!");
+    error!("Hello, Again!");
+    trace!("Hello, Again!");
 
-    println!("It did not crash!");
+    test_tracing(42, false);
+
+    debug!("It did not crash!");
     kernel::hlt_loop()
 }

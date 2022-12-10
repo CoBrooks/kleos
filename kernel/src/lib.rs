@@ -45,21 +45,18 @@ pub static PHYSICAL_MEM_OFFSET: Once<u64> = Once::new();
 pub fn init(boot_info: &'static mut BootInfo) {
     PHYSICAL_MEM_OFFSET.call_once(|| *boot_info.physical_memory_offset.as_ref().unwrap());
 
-    // Framebuffer Output
-    let fb = boot_info.framebuffer.as_mut().unwrap();
-    let fb_info = fb.info();
-    framebuffer::init(fb.buffer_mut(), fb_info);
-    println!("INIT: Framebuffer... [OK]");
+    let green = color::ANSI_ESCAPES[color::ColorName::Green as usize];
+    let clear = color::ANSI_ESCAPES[color::ColorName::Foreground as usize];
 
     // Interrupts
     print!("INIT: Interrupts.... ");
     interrupts::init();
-    println!("[OK]");
+    println!("[{green}OK{clear}]");
 
     // APIC
     print!("INIT: APIC.......... ");
     apic::init();
-    println!("[OK]");
+    println!("[{green}OK{clear}]");
 
     // Heap
     print!("INIT: Heap.......... ");
@@ -70,12 +67,18 @@ pub fn init(boot_info: &'static mut BootInfo) {
     };
     allocator::init_heap(&mut mapper, &mut frame_allocator)
         .expect("Heap initialization failed");
-    println!("[OK]");
+    println!("[{green}OK{clear}]");
+    
+    // Framebuffer Output
+    let fb = boot_info.framebuffer.as_mut().unwrap();
+    let fb_info = fb.info();
+    framebuffer::init(fb.buffer_mut(), fb_info);
+    println!("INIT: Framebuffer... [{green}OK{clear}]");
 
     // Tracing
     print!("INIT: Tracing....... ");
     tracing::init_tracing();
-    println!("[OK]");
+    println!("[{green}OK{clear}]");
 
     println!("Finished Initialization!\n");
 }

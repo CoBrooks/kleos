@@ -1,6 +1,8 @@
-use std::{process::{Command, Output}, fs::File, time::Instant};
+#![feature(restricted_std)]
 
-use time;
+use std::{process::{Command, Output}, fs::File};
+
+// use time;
 
 #[allow(clippy::upper_case_acronyms, unused)]
 enum BootType {
@@ -37,10 +39,10 @@ impl Drop for Debugger {
             .open("kleos.log")
             .unwrap();
 
-        let now = time::OffsetDateTime::now_local().unwrap();
-        let format = time::format_description::parse("[month]/[day]/[year] [hour]:[minute]").unwrap();
+        // let now = time::OffsetDateTime::now_local().unwrap();
+        // let format = time::format_description::parse("[month]/[day]/[year] [hour]:[minute]").unwrap();
 
-        writeln!(file, "{:-^48}", format!(" {} ", now.format(&format).unwrap())).unwrap();
+        writeln!(file, "{:-^48}", "").unwrap(); // format!(" {} ", now.format(&format).unwrap())).unwrap();
 
         let out = String::from_utf8(output.stdout).unwrap();
         writeln!(file, "{}\n", &out).unwrap();
@@ -50,6 +52,7 @@ impl Drop for Debugger {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let out_dir   = env!("OUT_DIR");
     let uefi_path = env!("UEFI_PATH");
     let bios_path = env!("BIOS_PATH");
 
@@ -76,14 +79,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .arg(ovmf_prebuilt::ovmf_pure_efi());
             cmd.arg("-drive")
                 .arg(format!("format=raw,file={uefi_path}"));
+            
+            println!("UEFI img located at: {uefi_path}");
         },
         BootType::BIOS => {
             cmd.arg("-drive")
                 .arg(format!("format=raw,file={bios_path}"));
+
+            println!("BIOS img located at: {bios_path}");
         },
     }
 
-    let debugger = Debugger::wrap(cmd);
+    let _ = Debugger::wrap(cmd);
 
     Ok(())
 }

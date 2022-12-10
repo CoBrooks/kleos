@@ -3,7 +3,7 @@ use core::str::FromStr;
 use crate::serial_println;
 
 // Gruvbox material medium dark
-pub static THEME: &[Color] = &[
+pub const THEME: &[Color] = &[
     Color::new(0x66, 0x5c, 0x54), // Black
     Color::new(0xEA, 0x69, 0x62), // Red
     Color::new(0xA9, 0xB6, 0x65), // Green
@@ -15,6 +15,21 @@ pub static THEME: &[Color] = &[
     
     Color::new(0x29, 0x28, 0x28), // Background
     Color::new(0xEB, 0xDB, 0xD2), // Foreground
+];
+
+pub const ANSI_ESCAPES: &[&str] = &[
+    "\x1B[30m", // Black
+    "\x1B[31m", // Red
+    "\x1B[32m", // Green
+    "\x1B[33m", // Yellow
+    "\x1B[34m", // Blue
+    "\x1B[35m", // Magenta
+    "\x1B[36m", // Cyan
+    "\x1B[37m", // White
+
+    // Not official ANSI codes
+    "\x1B[38m", // Background
+    "\x1B[39m", // Foreground
 ];
 
 #[derive(Clone, Copy)]

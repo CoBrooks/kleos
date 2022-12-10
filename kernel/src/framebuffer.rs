@@ -3,7 +3,7 @@ use core::fmt::Write;
 use bootloader_api::info::FrameBufferInfo;
 use spin::{Mutex, Once};
 
-use crate::{font, color::{ColorName, Color, THEME}, serial_println};
+use crate::{font, color::{ColorName, Color, THEME}};
 
 pub static FB_WRITER: Once<Mutex<FrameBufferWriter>> = Once::new();
 
@@ -29,7 +29,8 @@ pub struct FrameBufferWriter {
     buffer: &'static mut [u8],
     info: FrameBufferInfo,
     cell: (u16, u16),
-    text_style: TextStyle
+    text_style: TextStyle,
+    bytes_per_pixel: usize,
 }
 
 impl FrameBufferWriter {
@@ -38,7 +39,8 @@ impl FrameBufferWriter {
             buffer,
             info,
             cell: (0, 0),
-            text_style: TextStyle::default()
+            text_style: TextStyle::default(),
+            bytes_per_pixel: info.bytes_per_pixel
         };
 
         fb.clear();
@@ -143,10 +145,16 @@ impl FrameBufferWriter {
     }
 
     fn draw_pixel(&mut self, color: Color, (x, y): (u16, u16)) {
-        let pixel_index = (y as usize * self.info.width * 3) + (x as usize * 3);
+        let pixel_index = (y as usize * self.info.width * self.bytes_per_pixel) + (x as usize * self.bytes_per_pixel);
         self.buffer[pixel_index    ] = color.b;
         self.buffer[pixel_index + 1] = color.g;
         self.buffer[pixel_index + 2] = color.r;
+
+        if self.bytes_per_pixel >= 4 {
+            for i in 3..self.bytes_per_pixel {
+                self.buffer[pixel_index + i] = 0xFF;
+            }
+        }
     }
 
     fn draw_scaled_pixel(&mut self, color: Color, scale: u16, (x, y): (u16, u16)) {
@@ -173,11 +181,13 @@ pub fn _print(args: ::core::fmt::Arguments) {
     interrupts::without_interrupts(|| {
         crate::serial::_print(args);
 
-        FB_WRITER.get()
-            .expect("Framebuffer has not been initialized")
-            .lock()
-            .write_fmt(args)
-            .expect("Failed to write to framebuffer");
+        if let Some(fb) = FB_WRITER.get() {
+            fb.lock()
+                .write_fmt(args)
+                .expect("Failed to write to framebuffer");
+        } else if cfg!(debug_assertions) {
+            crate::serial_println!("WARN: Framebuffer has not been initialized");
+        }
     })
 }
 
